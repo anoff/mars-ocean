@@ -1,27 +1,13 @@
 # Mars Ocean
 
-Handover repo for **Grok Build**. This is not a finished product.
+Handover repo. Not a finished game.
 
-Goal: an interactive page that pours water onto Mars. A Python job precomputes an equal-area hex lookup grid. A React map loads that grid from its own `public/` folder and fills hexes from a volume slider.
+Canon (read these first):
 
-Full contract, data sources, and stage checklist: [`IMPLEMENTATION.md`](./IMPLEMENTATION.md).
+- [docs/GDD.md](./docs/GDD.md) — Plague Inc.–scale loop
+- [docs/SCIENCE.md](./docs/SCIENCE.md) — ice and CO2 budget
+- [docs/STACK.md](./docs/STACK.md) — web + Python split
+- [docs/GROK_PROJECT.md](./docs/GROK_PROJECT.md) — how to use a Grok Project with this repo
+- [IMPLEMENTATION.md](./IMPLEMENTATION.md) — four build stages for the map + grid
 
-## What to build
-
-```
-web/                         # Vite + React + MapLibre
-  public/grid/hex-grid.json  # lookup grid the map reads
-  src/                       # map + volume slider
-precompute/                  # Python CLI that writes hex-grid.json
-```
-
-## Stages (do in order)
-
-1. **Mars map only** — React app, OpenPlanetaryMap tiles, pan/zoom. No water.
-2. **Fake hex grid** — Python writes `hex-grid.json`. West of lon 0 fills fast, east fills slow. No DEM download required.
-3. **Wire the slider** — app loads `/grid/hex-grid.json`, slider is total volume, west floods first.
-4. **Real curves** — same JSON schema, volumes from MOLA 463 m DEM. Slider code must not change.
-
-## Done when
-
-Dragging the slider fills Mars from the hex grid, and swapping fake JSON for MOLA JSON does not require web-app changes.
+GitHub is the source of truth. A Grok Project should attach this repo or copies of `docs/`.
