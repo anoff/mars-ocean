@@ -15,13 +15,19 @@ web/                         # Vite + React + MapLibre
 precompute/                  # Python CLI that writes hex-grid.json
 ```
 
-## Run (stage 1)
+## Run
 
 ```
 cd web && npm install && npm run dev
 ```
 
-Open the printed local URL. You should see Mars as a globe (OpenPlanetaryMap raster on a sphere, no terrain) with pan/zoom/rotate and attribution `NASA / MOLA / USGS / OpenPlanetaryMap`.
+Open the printed local URL. Drag the volume slider: the **west** hemisphere should flood first.
+
+Regenerate the demo grid (optional):
+
+```
+cd precompute && python3 -m mars_ocean fake --spacing-km 150 --out ../web/public/grid/hex-grid.json
+```
 
 ## Stages (do in order)
 
