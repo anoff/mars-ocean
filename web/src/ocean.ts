@@ -8,6 +8,8 @@ export type GridMeta = {
   z_global_min: number;
   z_global_max: number;
   stages: number[];
+  check_h_m?: number;
+  check_volume_m3?: number;
 };
 
 export type HexProperties = {

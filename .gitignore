@@ -9,6 +9,7 @@ build/
 
 precompute/data/raw/
 precompute/data/work/
+web/public/grid/hex-grid-mola.json
 *.tif
 *.tiff
 *.IMG

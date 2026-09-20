@@ -29,6 +29,15 @@ Regenerate the demo grid (optional):
 cd precompute && python3 -m mars_ocean fake --spacing-km 150 --out ../web/public/grid/hex-grid.json
 ```
 
+Real MOLA curves (stage 4; ~2 GB DEM, gitignored):
+
+```
+cd precompute
+python3 -m venv .venv && .venv/bin/pip install numpy rasterio scipy
+.venv/bin/python -m mars_ocean download
+.venv/bin/python -m mars_ocean mola --spacing-km 150 --out ../web/public/grid/hex-grid.json
+```
+
 ## Stages (do in order)
 
 1. **Mars map only** — React app, OpenPlanetaryMap tiles, pan/zoom. No water.

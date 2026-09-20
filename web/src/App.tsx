@@ -203,8 +203,17 @@ export default function App() {
           addHexLayers(map, grid);
           const ocean = indexGrid(grid);
           oceanRef.current = ocean;
+          const initial = ocean.meta.check_volume_m3 ?? 0;
           setTotalM3(ocean.meta.total_volume_m3);
-          setHeightM(ocean.meta.z_global_min);
+          setVolumeM3(initial);
+          if (initial > 0) {
+            const result = evaluateOcean(ocean, initial);
+            map.setGlobalStateProperty("waterH", result.h);
+            setHeightM(result.h);
+            setFlooded(result.flooded);
+          } else {
+            setHeightM(ocean.meta.z_global_min);
+          }
           setReady(true);
         })
         .catch((err: unknown) => {
