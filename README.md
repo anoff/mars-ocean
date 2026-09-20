@@ -17,26 +17,18 @@ precompute/                  # Python CLI that writes hex-grid.json
 
 ## Run
 
-```
-cd web && npm install && npm run dev
-```
-
-Open the printed local URL. Drag the volume slider: the **west** hemisphere should flood first.
-
-Regenerate the demo grid (optional):
+Do not generate grids or download the DEM by hand. Use the scripts:
 
 ```
-cd precompute && python3 -m mars_ocean fake --spacing-km 150 --out ../web/public/grid/hex-grid.json
+./scripts/dev.sh          # web app (fake grid is the committed default)
+./scripts/test.sh         # Python unit tests
+./scripts/fake-grid.sh    # rewrite web/public/grid/hex-grid.json (no DEM)
+./scripts/mola-grid.sh    # download 2 GB MOLA DEM if needed, then rewrite the grid
 ```
 
-Real MOLA curves (stage 4; ~2 GB DEM, gitignored):
+Same targets: `make dev`, `make test`, `make fake`, `make mola`.
 
-```
-cd precompute
-python3 -m venv .venv && .venv/bin/pip install numpy rasterio scipy
-.venv/bin/python -m mars_ocean download
-.venv/bin/python -m mars_ocean mola --spacing-km 150 --out ../web/public/grid/hex-grid.json
-```
+After `fake-grid.sh`, the slider floods **west first**. After `mola-grid.sh`, it follows real topography (northern lowlands / Hellas). The DEM stays in `precompute/data/raw/` (gitignored).
 
 ## Stages (do in order)
 

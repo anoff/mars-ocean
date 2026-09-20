@@ -218,7 +218,9 @@ Done when replacing the fake file with the MOLA file still drives the same slide
 
 ## Suggested build order for an agent
 
-1. Confirm stage 1 runs.
-2. Do not restyle the map; generate / regenerate the fake grid and keep the slider.
-3. Implement real MOLA curves behind `python -m mars_ocean mola`.
-4. Leave `fake` as the default so first-load stays DEM-free.
+Do **not** download the DEM or run the MOLA integral yourself. Leave that to the scripts.
+
+1. Confirm `./scripts/dev.sh` shows the map.
+2. Implement grid writers behind `./scripts/fake-grid.sh` and `./scripts/mola-grid.sh`. Do not execute `mola-grid.sh` unless the user runs it.
+3. Leave the committed `hex-grid.json` as the **fake** default so first load stays DEM-free.
+4. `./scripts/mola-grid.sh` is how a human replaces that file with real curves.

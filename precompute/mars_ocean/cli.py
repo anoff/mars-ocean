@@ -9,6 +9,14 @@ from mars_ocean.download import dem_path, download_dem
 from mars_ocean.fake import build_fake_grid
 
 
+def repo_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
+def default_grid_path() -> Path:
+    return repo_root() / "web" / "public" / "grid" / "hex-grid.json"
+
+
 def _write_grid(grid: dict, out: Path) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     with out.open("w", encoding="utf-8") as handle:
@@ -51,7 +59,7 @@ def main(argv: list[str] | None = None) -> int:
     fake = sub.add_parser("fake", help="Write a DEM-free hex-grid.json")
     fake.add_argument("--spacing-km", type=float, default=150.0)
     fake.add_argument("--bin-count", type=int, default=BIN_COUNT)
-    fake.add_argument("--out", type=str, default="../web/public/grid/hex-grid.json")
+    fake.add_argument("--out", type=str, default=str(default_grid_path()))
     fake.set_defaults(func=_cmd_fake)
 
     dl = sub.add_parser("download", help="Fetch the 463 m MOLA GeoTIFF")
@@ -62,7 +70,7 @@ def main(argv: list[str] | None = None) -> int:
     mola.add_argument("--spacing-km", type=float, default=150.0)
     mola.add_argument("--bin-count", type=int, default=BIN_COUNT)
     mola.add_argument("--dem", type=str, default="")
-    mola.add_argument("--out", type=str, default="../web/public/grid/hex-grid.json")
+    mola.add_argument("--out", type=str, default=str(default_grid_path()))
     mola.set_defaults(func=_cmd_mola)
 
     args = parser.parse_args(argv)
