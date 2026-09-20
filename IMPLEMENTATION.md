@@ -218,9 +218,9 @@ Done when replacing the fake file with the MOLA file still drives the same slide
 
 ## Suggested build order for an agent
 
-Do **not** download the DEM or run the MOLA integral yourself. Leave that to the scripts.
+Do **not** download the DEM or run the MOLA integral yourself. Leave that to Task (`task mola` / `./scripts/mola-grid.sh`).
 
-1. Confirm `./scripts/dev.sh` shows the map.
-2. Implement grid writers behind `./scripts/fake-grid.sh` and `./scripts/mola-grid.sh`. Do not execute `mola-grid.sh` unless the user runs it.
+1. Confirm `task dev` (or `./scripts/dev.sh`) shows the map.
+2. Implement grid writers behind `task fake` and `task mola`. Do not execute `mola` unless the user runs it.
 3. Leave the committed `hex-grid.json` as the **fake** default so first load stays DEM-free.
-4. `./scripts/mola-grid.sh` is how a human replaces that file with real curves.
+4. `task mola` is how a human replaces that file with real curves.

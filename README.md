@@ -26,7 +26,7 @@ Do not generate grids or download the DEM by hand. Use the scripts:
 ./scripts/mola-grid.sh    # download 2 GB MOLA DEM if needed, then rewrite the grid
 ```
 
-Same targets: `make dev`, `make test`, `make fake`, `make mola`.
+Same targets via [Task](https://taskfile.dev): `task dev`, `task test`, `task fake`, `task mola`.
 
 After `fake-grid.sh`, the slider floods **west first**. After `mola-grid.sh`, it follows real topography (northern lowlands / Hellas). The DEM stays in `precompute/data/raw/` (gitignored).
 
