@@ -8,6 +8,7 @@ type OverlayProps = {
   ready: boolean;
   error: string | null;
   onVolume: (volumeM3: number) => void;
+  onCommit: () => void;
 };
 
 const SLIDER_STEPS = 1000;
@@ -20,6 +21,7 @@ export default function Overlay({
   ready,
   error,
   onVolume,
+  onCommit,
 }: OverlayProps) {
   const step = totalM3 <= 0 ? 0 : Math.round((volumeM3 / totalM3) * SLIDER_STEPS);
   return (
@@ -38,6 +40,8 @@ export default function Overlay({
           const next = Number(event.target.value) / SLIDER_STEPS;
           onVolume(next * totalM3);
         }}
+        onPointerUp={onCommit}
+        onKeyUp={onCommit}
       />
       <div className="ocean-readout">
         <span>{formatKm3(volumeM3)}</span>

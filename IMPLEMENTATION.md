@@ -127,8 +127,9 @@ Goal: generate `hex-grid.json` without downloading a DEM.
 
 Behaviour:
 
-- Place hex **centres** on a row-offset lattice (east-west spacing scaled by `1/cos(lat)`), clip poles near `±85°`. Display rings may be imperfect.
-- Volumes in later stages must **partition the planet**: assign each sample (fake area, or DEM pixel in stage 4) to exactly one cell (nearest centre). Do not treat overlapping `1/cos(lat)` rings as a volume geometry.
+- Place hex **centres** on a row-offset lattice (east-west spacing scaled by `1/cos(lat)`).
+- Display polygons are the **spherical Voronoi** cells of those centres (irregular hexes, a few pentagons/heptagons). Regular hexes cannot tile a sphere without gaps.
+- Volumes **partition the planet**: each DEM pixel (and fake area) goes to the nearest centre, which is the same partition as the Voronoi cells.
 - Default spacing `150 km` for the committed demo asset (~7.4k cells).
 - Split the planet on longitude `0` with **overlapping** elevation ranges so `V(h)` is not flat between west-full and east-start:
   - **west (`lon < 0`)**: `fillRate = "fast"`. Shallow low basin. Example `zMin = -7000`. Area fills immediately (bucket); small total capacity.

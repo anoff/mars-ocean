@@ -10,7 +10,8 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 from mars_ocean import BIN_COUNT, RADIUS_M, Z_GLOBAL_MAX
-from mars_ocean.hexgrid import geometry_for_center, iter_hex_centers
+from mars_ocean.hexgrid import iter_hex_centers
+from mars_ocean.voronoi import voronoi_geometries
 from mars_ocean.volume import make_stages
 
 # Headroom below Hellas so volumes[0] stays 0.
@@ -129,9 +130,10 @@ def build_mola_grid(
     binned_check = float(np.interp(CHECK_H, stages, volumes.sum(axis=0)))
     print(f"binned   V({CHECK_H:.0f} m) = {binned_check / 1e9:.4g} km³")
 
+    geoms = voronoi_geometries(centers)
     features = []
     total = 0.0
-    for index, (lon_deg, lat_deg) in enumerate(centers):
+    for index, geom in enumerate(geoms):
         vols = volumes[index].tolist()
         vols[0] = 0.0
         total += vols[-1]
@@ -145,7 +147,7 @@ def build_mola_grid(
                     "zMax": float(z_max[index]),
                     "volumes": vols,
                 },
-                "geometry": geometry_for_center(lon_deg, lat_deg, spacing_m),
+                "geometry": geom,
             }
         )
     return {

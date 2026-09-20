@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from mars_ocean import BIN_COUNT, RADIUS_M, Z_GLOBAL_MAX, Z_GLOBAL_MIN
-from mars_ocean.hexgrid import geometry_for_center, hex_area_m2, iter_hex_centers
+from mars_ocean.hexgrid import hex_area_m2, iter_hex_centers
+from mars_ocean.voronoi import voronoi_geometries
 from mars_ocean.volume import east_volume, make_stages, west_volume
 
 WEST_ZMIN = -7200.0
@@ -15,9 +16,10 @@ def build_fake_grid(spacing_km: float = 150.0, bin_count: int = BIN_COUNT) -> di
     area = hex_area_m2(spacing_m)
     stages = make_stages(Z_GLOBAL_MIN, Z_GLOBAL_MAX, bin_count)
     centers = iter_hex_centers(spacing_m)
+    geoms = voronoi_geometries(centers)
     features: list[dict] = []
     total = 0.0
-    for index, (lon, lat) in enumerate(centers):
+    for index, ((lon, lat), geom) in enumerate(zip(centers, geoms, strict=True)):
         west = lon < 0.0
         z_min = WEST_ZMIN if west else EAST_ZMIN
         curve = west_volume if west else east_volume
@@ -35,7 +37,7 @@ def build_fake_grid(spacing_km: float = 150.0, bin_count: int = BIN_COUNT) -> di
                     "fillRate": "fast" if west else "slow",
                     "volumes": volumes,
                 },
-                "geometry": geometry_for_center(lon, lat, spacing_m),
+                "geometry": geom,
             }
         )
     return {

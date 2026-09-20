@@ -9,7 +9,8 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FeatureCollection } from "geojson";
 import Overlay from "./Overlay";
-import { evaluateOcean, indexGrid, type HexGrid, type OceanIndex } from "./ocean";
+import { fitHexGrid } from "./hexDisplay";
+import { evaluateOcean, indexGrid, invertVolume, type HexGrid, type OceanIndex } from "./ocean";
 
 setWorkerUrl(workerUrl);
 setMaxParallelImageRequests(32);
@@ -19,6 +20,7 @@ const OPM_TILES =
 
 const ATTRIBUTION = "NASA / MOLA / USGS / OpenPlanetaryMap";
 const HEX_SOURCE = "hex";
+const MAP_DEBOUNCE_MS = 80;
 
 function addHexLayers(map: Map, grid: HexGrid) {
   if (map.getSource(HEX_SOURCE)) {
@@ -26,16 +28,17 @@ function addHexLayers(map: Map, grid: HexGrid) {
   }
   map.addSource(HEX_SOURCE, {
     type: "geojson",
-    data: grid as unknown as FeatureCollection,
+    data: fitHexGrid(grid) as unknown as FeatureCollection,
     promoteId: "id",
-    maxzoom: 5,
+    maxzoom: 0,
+    tolerance: 0,
   });
   map.addLayer({
     id: "hex-fill",
     type: "fill",
     source: HEX_SOURCE,
     paint: {
-      "fill-antialias": false,
+      "fill-antialias": true,
       "fill-color": "#4db2ff",
       "fill-opacity": [
         "case",
@@ -83,8 +86,8 @@ export default function App() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const oceanRef = useRef<OceanIndex | null>(null);
-  const rafRef = useRef<number>(0);
   const pendingRef = useRef(0);
+  const debounceRef = useRef<number>(0);
 
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +96,7 @@ export default function App() {
   const [heightM, setHeightM] = useState(-8000);
   const [flooded, setFlooded] = useState(0);
 
-  const paint = useCallback((volume: number) => {
+  const paintMap = useCallback((volume: number) => {
     const map = mapRef.current;
     const ocean = oceanRef.current;
     if (!map || !ocean || !map.getSource(HEX_SOURCE)) {
@@ -109,16 +112,24 @@ export default function App() {
     (volume: number) => {
       pendingRef.current = volume;
       setVolumeM3(volume);
-      if (rafRef.current) {
-        return;
+      const ocean = oceanRef.current;
+      if (ocean) {
+        setHeightM(invertVolume(volume, ocean.meta.stages, ocean.globalV));
       }
-      rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = 0;
-        paint(pendingRef.current);
-      });
+      window.clearTimeout(debounceRef.current);
+      debounceRef.current = window.setTimeout(() => {
+        debounceRef.current = 0;
+        paintMap(pendingRef.current);
+      }, MAP_DEBOUNCE_MS);
     },
-    [paint],
+    [paintMap],
   );
+
+  const onCommit = useCallback(() => {
+    window.clearTimeout(debounceRef.current);
+    debounceRef.current = 0;
+    paintMap(pendingRef.current);
+  }, [paintMap]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -228,9 +239,7 @@ export default function App() {
     }
 
     return () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-      }
+      window.clearTimeout(debounceRef.current);
       map.remove();
       mapRef.current = null;
     };
@@ -247,6 +256,7 @@ export default function App() {
         ready={ready}
         error={error}
         onVolume={onVolume}
+        onCommit={onCommit}
       />
     </>
   );

@@ -27,6 +27,21 @@ class HexGridTests(unittest.TestCase):
         self.assertGreater(len(centers), 4000)
         self.assertLess(len(centers), 10_000)
 
+    def test_voronoi_covers_every_center(self) -> None:
+        from mars_ocean.voronoi import voronoi_geometries
+
+        centers = iter_hex_centers(400_000.0)
+        geoms = voronoi_geometries(centers)
+        self.assertEqual(len(geoms), len(centers))
+        for geom in geoms:
+            self.assertIn(geom["type"], ("Polygon", "MultiPolygon"))
+            if geom["type"] == "Polygon":
+                ring = geom["coordinates"][0]
+            else:
+                ring = geom["coordinates"][0][0]
+            self.assertEqual(ring[0], ring[-1])
+            self.assertGreaterEqual(len(ring), 4)
+
 
 class FakeCurveTests(unittest.TestCase):
     def test_schema_and_west_east(self) -> None:

@@ -5,6 +5,7 @@ description = "Precompute hex volume lookup grids for the Mars Ocean map"
 requires-python = ">=3.11"
 
 [project.optional-dependencies]
+grid = ["numpy", "scipy"]
 mola = ["numpy", "rasterio", "scipy"]
 
 [build-system]

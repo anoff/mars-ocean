@@ -28,7 +28,7 @@ Do not generate grids or download the DEM by hand. Use the scripts:
 
 Same targets via [Task](https://taskfile.dev): `task dev`, `task test`, `task fake`, `task mola`.
 
-After `fake-grid.sh`, the slider floods **west first**. After `mola-grid.sh`, it follows real topography (northern lowlands / Hellas). The DEM stays in `precompute/data/raw/` (gitignored).
+After `task fake`, the slider floods **west first**. After `task mola`, it follows real topography (northern lowlands / Hellas). Cell shapes are spherical Voronoi polygons (no gaps). The DEM stays in `precompute/data/raw/` (gitignored).
 
 ## Stages (do in order)
 
