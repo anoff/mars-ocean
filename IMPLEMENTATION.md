@@ -6,14 +6,14 @@ Planet constants:
 
 - Mars mean radius `R = 3_396_190` m (IAU / MOLA mosaic)
 - Heights are metres above the **areoid**
-- Typical surface range about `-8200` m to `+21229` m
+- Typical surface range about `-8200` m to `+21229` m (confirm from the GeoTIFF; do not hard-code extrema)
 
 DEM (stage 4 only):
 
-- USGS MOLA 463 m GeoTIFF  
+- USGS MOLA 463 m GeoTIFF (Int16, 46080×23040, simple cylindrical, 128 px/°, ~2 GB)  
   `https://planetarymaps.usgs.gov/mosaic/Mars_MGS_MOLA_DEM_mosaic_global_463m.tif`
-- Optional sharper: USGS MOLA+HRSC 200 m blend  
-  `https://planetarymaps.usgs.gov/mosaic/Mars/HRSC_MOLA_Blend/Mars_HRSC_MOLA_BlendDEM_Global_200mp_v2.tif`
+- Units are metres of elevation above the GMM-2B areoid, not planetary radii.
+- Do **not** start from the HRSC 200 m blend (that file is ~11 GB).
 
 Basemap tiles (stage 1):
 
@@ -21,7 +21,7 @@ Basemap tiles (stage 1):
 https://cartocdn-gusc.global.ssl.fastly.net/opmbuilder/api/v1/map/named/opm-mars-basemap-v0-2/all/{z}/{x}/{y}.png
 ```
 
-OpenPlanetaryMap projects Mars lon/lat into Web Mercator the same way Earth maps do (`lon -180..180`). Poles are clipped. That is acceptable for v1.
+OpenPlanetaryMap projects Mars lon/lat into Web Mercator the same way Earth maps do (`lon -180..180`). Poles are clipped. That is acceptable for v1. Cap map zoom to what the named map actually serves (about `0…8`).
 
 ---
 
@@ -43,11 +43,11 @@ Shape:
     "radius_m": 3396190,
     "spacing_km": 150,
     "curve": "fake",
-    "bin_count": 32,
     "volume_unit": "m3",
     "total_volume_m3": 123,
     "z_global_min": -8000,
-    "z_global_max": 2000
+    "z_global_max": 0,
+    "stages": [-8000, -7875, 0]
   },
   "features": [
     {
@@ -58,8 +58,7 @@ Shape:
         "zMin": -7200,
         "zMax": -4100,
         "fillRate": "fast",
-        "stages": [-7200, -7100],
-        "volumes": [0, 1200000000]
+        "volumes": [0, 1200000000, 4500000000000]
       },
       "geometry": {
         "type": "Polygon",
@@ -72,20 +71,25 @@ Shape:
 
 Rules:
 
-- `stages[k]` is water-surface elevation (m, areoid), strictly increasing.
-- `volumes[k]` is **cumulative** water stored in that hex when the local water surface is `stages[k]`, in m³. `volumes[0] === 0`.
+- `meta.stages` is a **shared** global elevation ladder (m, areoid), strictly increasing. Default **64** bins from `z_global_min` to `z_global_max`.
+- Every feature has `volumes.length === meta.stages.length`. `volumes[0] === 0` at `stages[0] === z_global_min`.
+- `volumes[k]` is **cumulative** water stored in that hex when the global water surface is `stages[k]`, in m³: `Σ (stages[k] − z)+ A` over the hex’s pixels.
 - Interpolate linearly between bins.
+- There is **no lid at local terrain max**. After a hex is fully submerged, remaining bins keep growing with slope ≈ hex area. Property `zMax` is the highest terrain in the hex (for readouts), not the last stage.
+- `z_global_max` is the ocean cap and the last stage. Default **`0` m areoid** so the slider stays in the ocean range. `total_volume_m3 === V(z_global_max)`. Filling to Olympus Mons would bury the interesting volume in the first 1% of a linear slider.
 - `fillRate` is only for the fake stage (`fast` | `slow`). Stage 4 may omit it.
-- Geometry is a closed hex ring in lon/lat, WGS84-style degrees, lon in `[-180, 180]`.
-- Demo spacing is `150 km` (~1.2k hexes) so the JSON stays small. Production target is `25 km` (~270k hexes) as a later binary format, not GeoJSON.
+- Geometry is a closed hex ring in lon/lat, WGS84-style degrees, lon in `[-180, 180]`. Split rings that cross the antimeridian. Clip near `±85°` to match Web Mercator.
+- Demo spacing is `150 km` (**~7.4k hexes**, not 1.2k). Expect ~8–20 MB GeoJSON. Production target is `25 km` (~270k hexes) as a later binary format, not GeoJSON.
 
 Volume at a global water height `h` for one hex:
 
 ```
-if h <= zMin: 0
-if h >= zMax: volumes[-1]
+if h <= stages[0]: 0
+if h >= stages[-1]: volumes[-1]
 else: lerp between surrounding bins
 ```
+
+Inundated **area** (for paint) is `dV/dh` — the slope of that curve — not `V / Vmax`.
 
 Global volume:
 
@@ -93,7 +97,7 @@ Global volume:
 V(h) = sum_i volume_i(h)
 ```
 
-The slider is in **total volume**, not height. Invert `V(h)` with binary search on `h`.
+Pre-sum a global curve at `meta.stages` and invert that. The slider is in **total volume**, not height. Invert `V(h)` with binary search on `h`. If `V` is locally flat, take the **least** `h` such that `V(h) ≥ target`.
 
 ---
 
@@ -123,13 +127,15 @@ Goal: generate `hex-grid.json` without downloading a DEM.
 
 Behaviour:
 
-- Build an equal-ish hex tessellation on the sphere (row offset hex grid; scale east-west spacing by `1/cos(lat)`).
-- Default spacing `150 km` for the committed demo asset.
-- Split the planet on longitude `0`:
-  - **west (`lon < 0`)**: `fillRate = "fast"`. Low basin. Example `zMin = -7500`, `zMax = -3500`. Steep early curve so a little volume floods most of the hex.
-  - **east (`lon >= 0`)**: `fillRate = "slow"`. High plateau. Example `zMin = -2500`, `zMax = 1500`. Needs much more volume before it paints.
-- 32 elevation bins per hex.
-- Fake volumes: treat each hex as a bucket with area `A = (√3/2) * d²` and a linear depth fill, then multiply east hexes by a large capacity factor (e.g. 8×) so they stay dry while the west is already a sea.
+- Place hex **centres** on a row-offset lattice (east-west spacing scaled by `1/cos(lat)`), clip poles near `±85°`. Display rings may be imperfect.
+- Volumes in later stages must **partition the planet**: assign each sample (fake area, or DEM pixel in stage 4) to exactly one cell (nearest centre). Do not treat overlapping `1/cos(lat)` rings as a volume geometry.
+- Default spacing `150 km` for the committed demo asset (~7.4k cells).
+- Split the planet on longitude `0` with **overlapping** elevation ranges so `V(h)` is not flat between west-full and east-start:
+  - **west (`lon < 0`)**: `fillRate = "fast"`. Shallow low basin. Example `zMin = -7000`. Area fills immediately (bucket); small total capacity.
+  - **east (`lon >= 0`)**: `fillRate = "slow"`. Higher plateau. Example `zMin = -2500`. Holds **most** of the volume.
+  - Both curves continue to `z_global_max = 0`. Do not use a sealed west tank (`zMax = -3500`) plus an east 8× lid — that contradicts “mid-slider west is a sea.”
+- 64 **shared** global stages on `meta`, not 32 local stages per hex.
+- Fake volumes: treat each hex as a bucket with area `A = (√3/2) * d²` (centre-to-centre spacing `d`) and a linear depth fill above `zMin`, then a continuing column up to `z_global_max`.
 
 CLI:
 
@@ -137,7 +143,9 @@ CLI:
 python -m mars_ocean fake --spacing-km 150 --out ../web/public/grid/hex-grid.json
 ```
 
-Done when the written GeoJSON loads in geojson.io and west/east properties differ.
+Package lives under `precompute/` (`pyproject.toml`, `src/mars_ocean/`). Commit the 150 km fake JSON so the web app runs without Python.
+
+Done when the written GeoJSON loads in geojson.io (features only; `meta` is a foreign member) and west/east properties differ.
 
 ---
 
@@ -148,18 +156,20 @@ Goal: the web app loads the grid from `/grid/hex-grid.json` and a volume slider 
 UI:
 
 - Range slider `0 … meta.total_volume_m3`
-- Readout: volume (km³), inferred water height (m areoid), flooded fraction
-- Hex fill: `rgba` blue, opacity from flooded fraction of that hex
+- Readout: volume (km³), inferred water height (m areoid), flooded **area** fraction
+- Hex fill: `rgba` blue, opacity from inundated area fraction `clamp((dV/dh) / A_hex)` — not volume fraction
 - Outline faint at low zoom, stronger when zoomed
 
 Logic:
 
 1. Load grid once.
-2. Build per-hex interpolators.
-3. On slider input, binary-search `h` so `sum volume_i(h)` matches the requested volume.
-4. Set a feature-state or rebuild a fill color expression.
+2. Build per-hex interpolators and a **pre-summed global** `V[k]` at `meta.stages`.
+3. On slider input, binary-search `h` on the global curve so `V(h)` matches the requested volume.
+4. Set feature-state (throttled to animation frames, `promoteId`). Do not `setData` the whole collection on every input.
 
 At mid slider the **western** hemisphere should be mostly blue and the **eastern** still mostly dry. That is how you know fake curves are wired.
+
+Optional debug: a hidden height control that sets `h` directly and shows `V(h)`.
 
 Done when dragging the slider visibly floods west first, then east.
 
@@ -167,28 +177,33 @@ Done when dragging the slider visibly floods west first, then east.
 
 ## Stage 4 — Real volume lookup
 
-Goal: same schema, real hypsometry from MOLA.
+Goal: same schema, real hypsometry from MOLA. The web slider code must not change.
 
 Pipeline:
 
-1. `python -m mars_ocean download` — fetch the 463 m GeoTIFF into `precompute/data/raw/` (gitignored).
-2. For each hex polygon, sample DEM pixels whose centres fall inside (or rasterize hex to mask).
-3. Compute pixel area on the sphere:
+1. `python -m mars_ocean download` — fetch the 463 m GeoTIFF into `precompute/data/raw/` (gitignored). Do not load 2 GB as float64.
+2. Assign **every DEM pixel to exactly one hex** (nearest centre, or rasterize a partition). Point-in-polygon on overlapping rings will double-count.
+3. Stream the Int16 mosaic in windows (rasterio). Skip nodata; do not treat fill as elevation 0.
+4. Compute pixel area on the sphere:
 
    `A(φ) = R² Δλ (sin(φ + Δφ/2) - sin(φ - Δφ/2))`
 
-   Do not use a single equatorial m/px.
-4. Build 32 bins from that hex’s `zMin..zMax`.
-5. `volumes[k] = sum over pixels with z < stages[k] of (stages[k] - z) * A_pixel`
+   Do not use a single equatorial m/px. Sanity-check `Σ A_pixel ≈ 4πR²` within a few percent.
+5. Accumulate `volumes[k] = sum over pixels in hex with z < stages[k] of (stages[k] - z) * A_pixel` on the **shared** `meta.stages`. After local `zMax`, the column still grows.
 6. Write the same GeoJSON (or a compact sibling format if the file exceeds ~20 MB).
-7. Copy into `web/public/grid/hex-grid.json`.
+7. Copy into `web/public/grid/hex-grid.json` only when replacing the committed fake default locally.
 8. Set `meta.curve = "mola"`.
 
 Start with `--spacing-km 150` even in stage 4. Only after the integral matches published ballparks (~`2e7 km³` near `-3800 m` areoid) drop spacing toward `25 km`.
 
+Validate twice:
+
+- Direct (unbinned) DEM integral at `h = -3800` m. If this is off, stop.
+- Binned JSON + slider readout. The ±30% budget is for datum/area bugs, not also for 64-bin interpolation error.
+
 Optional later, not this stage: neighbor graph + spill elevations for source-and-overflow filling. Stage 4 stays **global equipotential** (`z < h` everywhere) so the slider math does not change.
 
-Done when replacing the fake file with the MOLA file still drives the same slider, and a readout at `h ≈ -3800 m` is within ~30% of `2×10⁷ km³`.
+Done when replacing the fake file with the MOLA file still drives the same slider, and a readout at `h ≈ -3800 m` is within ~30% of `2×10⁷ km³` (Carr & Head 2003: Deuteronilus ~1.9×10⁷ km³ at −3792 m).
 
 ---
 
@@ -199,6 +214,7 @@ Done when replacing the fake file with the MOLA file still drives the same slide
 - 5 m CTX mosaic
 - Hex counts above ~300k in GeoJSON
 - Auth, backend, database
+- H3 (acceptable later if neighbor ids are needed for spill)
 
 ## Suggested build order for an agent
 
