@@ -21,7 +21,7 @@ precompute/                  # Python CLI that writes hex-grid.json
 cd web && npm install && npm run dev
 ```
 
-Open the printed local URL. You should see an OpenPlanetaryMap Mars basemap with pan/zoom and attribution `NASA / MOLA / USGS / OpenPlanetaryMap`.
+Open the printed local URL. You should see Mars as a globe (OpenPlanetaryMap raster on a sphere, no terrain) with pan/zoom/rotate and attribution `NASA / MOLA / USGS / OpenPlanetaryMap`.
 
 ## Stages (do in order)
 

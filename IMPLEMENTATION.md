@@ -103,21 +103,21 @@ Pre-sum a global curve at `meta.stages` and invert that. The slider is in **tota
 
 ## Stage 1 — Mars rendering web app
 
-Goal: a React app that shows Mars. No water yet.
+Goal: a React app that shows Mars as a **globe**. No water yet, no 3D terrain.
 
 Stack (do not swap without a reason):
 
 - Vite + React + TypeScript
-- MapLibre GL JS
-- OpenPlanetaryMap raster tiles
+- MapLibre GL JS (`projection: { type: "globe" }`)
+- OpenPlanetaryMap raster tiles painted on the sphere
 
 Done when:
 
-- `cd web && npm install && npm run dev` shows a Mars basemap
-- Pan / zoom works
+- `cd web && npm install && npm run dev` shows a Mars globe (OPM pixel map, black space)
+- Pan / zoom / rotate works
 - Attribution visible: `NASA / MOLA / USGS / OpenPlanetaryMap`
 
-Do not add Cesium in this stage.
+Do not add Cesium or MOLA terrain in this stage. Poles will smear: OPM tiles stop near ±85° and MapLibre stretches the last row to the pole.
 
 ---
 
