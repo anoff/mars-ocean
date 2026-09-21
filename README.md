@@ -1,13 +1,13 @@
-# Mars Ocean
+# Areoid
 
-Handover repo. Not a finished game.
+Working title for a Mars climate-intervention game. Repo folder remains `mars-ocean`.
 
-Canon (read these first):
+You operate one program: warm Mars, move ice, and keep water liquid long enough to satisfy a scenario — starting with **Known Ice**.
 
-- [docs/GDD.md](./docs/GDD.md) — Plague Inc.–scale loop
-- [docs/SCIENCE.md](./docs/SCIENCE.md) — ice and CO2 budget
-- [docs/STACK.md](./docs/STACK.md) — web + Python split
-- [docs/GROK_PROJECT.md](./docs/GROK_PROJECT.md) — how to use a Grok Project with this repo
-- [IMPLEMENTATION.md](./IMPLEMENTATION.md) — four build stages for the map + grid
+Canon:
 
-GitHub is the source of truth. A Grok Project should attach this repo or copies of `docs/`.
+- [docs/GDD.md](./docs/GDD.md)
+- [docs/SCIENCE.md](./docs/SCIENCE.md)
+- [docs/STACK.md](./docs/STACK.md)
+- [docs/GROK_PROJECT.md](./docs/GROK_PROJECT.md)
+- [IMPLEMENTATION.md](./IMPLEMENTATION.md)

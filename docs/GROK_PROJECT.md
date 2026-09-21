@@ -4,17 +4,18 @@ GitHub is canon. The Grok Project is a reading room.
 
 ## Project setup (grok.com)
 
-1. Create a Project named Mars Ocean.
+1. Create a Project named Areoid.
 2. Instructions (paste):
 
-   Plague Inc.–scale Mars terraforming game. Not Civ.
+   Game: Areoid. First scenario: Known Ice.
    Always read docs/GDD.md, docs/SCIENCE.md, docs/STACK.md, IMPLEMENTATION.md.
+   One planet, one program, no civilization layer.
    Map is MapLibre + hex volume grid. Rules live in sim/.
-   Known ice caps volume. Pressure gates liquid water.
-   Do not invent a society sim. Do not treat chat as canon; edit these files instead.
+   Known ice caps volume. Pressure or a lid gates liquid water.
+   Do not treat chat as canon; edit these files instead.
 
-3. Connect GitHub to this repo (anoff/mars-ocean) or upload copies of the four docs.
-   If you upload copies, re-upload after every canon commit.
+3. Connect GitHub to anoff/mars-ocean or upload copies of docs/.
+   Re-upload after every canon commit if you use copies.
 
 ## Chats inside the Project
 
@@ -23,7 +24,7 @@ GitHub is canon. The Grok Project is a reading room.
 - 02-sim-rules
 - 03-tech-tree
 - 04-map-regions
-- 05-ui-plague
-- 06-build — Grok Build against this repo
+- 05-ui
+- 06-build — implement against this repo
 
-New aspect = new chat. Point it at the docs. Do not continue a 40-turn mixed thread.
+New aspect = new chat. Point it at the docs.
