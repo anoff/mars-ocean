@@ -9,6 +9,8 @@ type OverlayProps = {
   error: string | null;
   onVolume: (volumeM3: number) => void;
   onCommit: () => void;
+  sourceId: string | null;
+  onClearSource: () => void;
 };
 
 const SLIDER_STEPS = 1000;
@@ -22,12 +24,26 @@ export default function Overlay({
   error,
   onVolume,
   onCommit,
+  sourceId,
+  onClearSource,
 }: OverlayProps) {
   const step = totalM3 <= 0 ? 0 : Math.round((volumeM3 / totalM3) * SLIDER_STEPS);
   return (
     <div className="ocean-panel">
       <div className="ocean-title">Mars Ocean</div>
       {error ? <div className="ocean-error">{error}</div> : null}
+      <div className="ocean-source">
+        {sourceId ? (
+          <>
+            <span>Pouring into {sourceId}</span>
+            <button type="button" className="ocean-clear" onClick={onClearSource}>
+              Whole planet
+            </button>
+          </>
+        ) : (
+          <span>Click the globe to pour into one basin</span>
+        )}
+      </div>
       <input
         className="ocean-slider"
         type="range"

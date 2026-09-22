@@ -71,8 +71,8 @@ def _close_through_pole(ring: list[list[float]], pole_lat: float) -> list[list[f
     return ring[: best_i + 1] + insert + ring[best_i + 1 :]
 
 
-def voronoi_geometries(centers: list[tuple[float, float]]) -> list[dict]:
-    """One spherical Voronoi polygon per centre. Covers the whole sphere, no gaps."""
+def voronoi_partition(centers: list[tuple[float, float]]) -> tuple[list[dict], list[list[int]]]:
+    """Voronoi polygons and neighbor indices (from spherical ridges)."""
     lon = np.array([c[0] for c in centers], dtype=np.float64)
     lat = np.array([c[1] for c in centers], dtype=np.float64)
     xyz = _lonlat_to_xyz(lon, lat)
@@ -90,4 +90,27 @@ def voronoi_geometries(centers: list[tuple[float, float]]) -> list[dict]:
         elif i == south_i:
             ring = _close_through_pole(ring, -90.0)
         geoms.append(_parts_to_geometry(split_antimeridian(ring)))
+    edge_cells: dict[tuple[int, int], list[int]] = {}
+    for i, region in enumerate(sv.regions):
+        verts = [int(v) for v in region]
+        n_v = len(verts)
+        for k in range(n_v):
+            edge = (verts[k], verts[(k + 1) % n_v])
+            if edge[0] > edge[1]:
+                edge = (edge[1], edge[0])
+            edge_cells.setdefault(edge, []).append(i)
+    neighbor_sets: list[set[int]] = [set() for _ in centers]
+    for cells in edge_cells.values():
+        if len(cells) != 2:
+            continue
+        a, b = cells[0], cells[1]
+        neighbor_sets[a].add(b)
+        neighbor_sets[b].add(a)
+    neighbors = [sorted(row) for row in neighbor_sets]
+    return geoms, neighbors
+
+
+def voronoi_geometries(centers: list[tuple[float, float]]) -> list[dict]:
+    """One spherical Voronoi polygon per centre. Covers the whole sphere, no gaps."""
+    geoms, _ = voronoi_partition(centers)
     return geoms

@@ -10,8 +10,9 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 from mars_ocean import BIN_COUNT, RADIUS_M, Z_GLOBAL_MAX
+from mars_ocean.graph import pack_graph
 from mars_ocean.hexgrid import iter_hex_centers
-from mars_ocean.voronoi import voronoi_geometries
+from mars_ocean.voronoi import voronoi_partition
 from mars_ocean.volume import make_stages
 
 # Headroom below Hellas so volumes[0] stays 0.
@@ -25,6 +26,33 @@ def _xyz(lon_rad: np.ndarray, lat_rad: np.ndarray) -> np.ndarray:
     return np.column_stack(
         (cos_lat * np.cos(lon_rad), cos_lat * np.sin(lon_rad), np.sin(lat_rad))
     )
+
+
+def _accumulate_spills(
+    ids2d: np.ndarray,
+    z: np.ndarray,
+    valid: np.ndarray,
+    spill_lookup: dict[tuple[int, int], float],
+) -> None:
+    """Saddle between cells = min over adjacent pixel pairs of max(z_a, z_b)."""
+    for dy, dx in ((0, 1), (1, 0)):
+        a = ids2d[: ids2d.shape[0] - dy, : ids2d.shape[1] - dx]
+        b = ids2d[dy:, dx:]
+        za = z[: z.shape[0] - dy, : z.shape[1] - dx]
+        zb = z[dy:, dx:]
+        ok = valid[: valid.shape[0] - dy, : valid.shape[1] - dx] & valid[dy:, dx:] & (a != b)
+        if not np.any(ok):
+            continue
+        aa = a[ok].astype(np.int64, copy=False)
+        bb = b[ok].astype(np.int64, copy=False)
+        saddle = np.maximum(za[ok], zb[ok])
+        lo = np.minimum(aa, bb)
+        hi = np.maximum(aa, bb)
+        for i, j, s in zip(lo.tolist(), hi.tolist(), saddle.tolist()):
+            key = (i, j)
+            prev = spill_lookup.get(key)
+            if prev is None or s < prev:
+                spill_lookup[key] = s
 
 
 def _pixel_area_m2(lat_rad: np.ndarray, dlon: float, dlat: float, radius_m: float) -> np.ndarray:
@@ -53,6 +81,7 @@ def build_mola_grid(
     area_sum = 0.0
     v_check = 0.0
     n_used = 0
+    spill_lookup: dict[tuple[int, int], float] = {}
 
     with rasterio.open(dem_path) as src:
         if src.count != 1:
@@ -99,6 +128,9 @@ def build_mola_grid(
             hex_ids = hex_ids.astype(np.int64, copy=False)
             np.minimum.at(z_min, hex_ids, z_v)
             np.maximum.at(z_max, hex_ids, z_v)
+            ids2d = np.full(z.shape, -1, dtype=np.int32)
+            ids2d[valid] = hex_ids
+            _accumulate_spills(ids2d, z, valid, spill_lookup)
             v_check += float(np.maximum(0.0, CHECK_H - z_v).dot(area))
             for start in range(0, z_v.size, CHUNK):
                 sl = slice(start, start + CHUNK)
@@ -130,7 +162,7 @@ def build_mola_grid(
     binned_check = float(np.interp(CHECK_H, stages, volumes.sum(axis=0)))
     print(f"binned   V({CHECK_H:.0f} m) = {binned_check / 1e9:.4g} km³")
 
-    geoms = voronoi_geometries(centers)
+    geoms, neighbors = voronoi_partition(centers)
     features = []
     total = 0.0
     for index, geom in enumerate(geoms):
@@ -165,5 +197,6 @@ def build_mola_grid(
             "check_h_m": CHECK_H,
             "check_volume_m3": v_check,
         },
+        "graph": pack_graph(neighbors, z_min.tolist(), z_max.tolist(), spill_lookup),
         "features": features,
     }

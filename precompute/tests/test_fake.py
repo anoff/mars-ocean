@@ -28,11 +28,13 @@ class HexGridTests(unittest.TestCase):
         self.assertLess(len(centers), 10_000)
 
     def test_voronoi_covers_every_center(self) -> None:
-        from mars_ocean.voronoi import voronoi_geometries
+        from mars_ocean.voronoi import voronoi_partition
 
         centers = iter_hex_centers(400_000.0)
-        geoms = voronoi_geometries(centers)
+        geoms, neighbors = voronoi_partition(centers)
         self.assertEqual(len(geoms), len(centers))
+        self.assertEqual(len(neighbors), len(centers))
+        self.assertTrue(any(len(nbs) >= 3 for nbs in neighbors))
         for geom in geoms:
             self.assertIn(geom["type"], ("Polygon", "MultiPolygon"))
             if geom["type"] == "Polygon":
@@ -59,6 +61,8 @@ class FakeCurveTests(unittest.TestCase):
         stages = meta["stages"]
         self.assertEqual(stages[0], meta["z_global_min"])
         self.assertEqual(stages[-1], meta["z_global_max"])
+        self.assertIn("graph", grid)
+        self.assertEqual(len(grid["graph"]["neighbors"]), len(grid["features"]))
 
     def test_mid_volume_is_still_west(self) -> None:
         grid = build_fake_grid(spacing_km=400.0, bin_count=32)

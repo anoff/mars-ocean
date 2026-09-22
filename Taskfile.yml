@@ -12,9 +12,10 @@ tasks:
       - ./scripts/dev.sh
 
   test:
-    desc: Run Python unit tests
+    desc: Run Python and web unit tests
     cmds:
       - ./scripts/test.sh
+      - ./scripts/test-web.sh
 
   fake:
     desc: Rewrite hex-grid.json with fake west/east curves (no DEM)

@@ -20,9 +20,15 @@ export type HexProperties = {
   volumes: number[];
 };
 
+export type SpillGraphJson = {
+  neighbors: number[][];
+  spills: number[][];
+};
+
 export type HexGrid = {
   type: "FeatureCollection";
   meta: GridMeta;
+  graph?: SpillGraphJson;
   features: Array<{
     type: "Feature";
     id: string;
@@ -35,9 +41,83 @@ export type OceanIndex = {
   meta: GridMeta;
   ids: string[];
   volumes: Float64Array;
+  zMin: Float64Array;
+  zMax: Float64Array;
   areaM2: number;
   globalV: Float64Array;
+  graph: SpillGraphJson | null;
+  idIndex: Map<string, number>;
+  lon: Float64Array;
+  lat: Float64Array;
 };
+
+function walkLonLat(coords: unknown, visit: (lon: number, lat: number) => void): void {
+  if (!Array.isArray(coords) || coords.length === 0) {
+    return;
+  }
+  if (typeof coords[0] === "number") {
+    visit(coords[0], coords[1] as number);
+    return;
+  }
+  for (const child of coords) {
+    walkLonLat(child, visit);
+  }
+}
+
+function featureCentroid(coordinates: unknown): [number, number] {
+  let origin = 0;
+  let slon = 0;
+  let slat = 0;
+  let n = 0;
+  walkLonLat(coordinates, (lon, lat) => {
+    if (n === 0) {
+      origin = lon;
+    }
+    let d = lon - origin;
+    if (d > 180) {
+      d -= 360;
+    }
+    if (d < -180) {
+      d += 360;
+    }
+    slon += d;
+    slat += lat;
+    n += 1;
+  });
+  if (n === 0) {
+    return [0, 0];
+  }
+  let lon = origin + slon / n;
+  while (lon > 180) {
+    lon -= 360;
+  }
+  while (lon < -180) {
+    lon += 360;
+  }
+  return [lon, slat / n];
+}
+
+export function nearestCell(ocean: OceanIndex, lon: number, lat: number): number {
+  const cos = Math.cos((lat * Math.PI) / 180);
+  let best = 0;
+  let bestD = Infinity;
+  for (let i = 0; i < ocean.lon.length; i += 1) {
+    let dlon = ocean.lon[i] - lon;
+    if (dlon > 180) {
+      dlon -= 360;
+    }
+    if (dlon < -180) {
+      dlon += 360;
+    }
+    const dlat = ocean.lat[i] - lat;
+    const d = dlon * dlon * cos * cos + dlat * dlat;
+    if (d < bestD) {
+      bestD = d;
+      best = i;
+    }
+  }
+  return best;
+}
 
 function hexAreaM2(spacingKm: number): number {
   const d = spacingKm * 1000;
@@ -49,10 +129,19 @@ export function indexGrid(grid: HexGrid): OceanIndex {
   const n = grid.features.length;
   const volumes = new Float64Array(n * bins);
   const ids = new Array<string>(n);
+  const zMin = new Float64Array(n);
+  const zMax = new Float64Array(n);
+  const lon = new Float64Array(n);
+  const lat = new Float64Array(n);
   const globalV = new Float64Array(bins);
   for (let i = 0; i < n; i += 1) {
     const props = grid.features[i].properties;
     ids[i] = props.id;
+    zMin[i] = props.zMin;
+    zMax[i] = props.zMax;
+    const [clon, clat] = featureCentroid(grid.features[i].geometry.coordinates);
+    lon[i] = clon;
+    lat[i] = clat;
     const src = props.volumes;
     if (src.length !== bins) {
       throw new Error(`hex ${props.id} volumes length ${src.length} != ${bins}`);
@@ -68,8 +157,14 @@ export function indexGrid(grid: HexGrid): OceanIndex {
     meta: grid.meta,
     ids,
     volumes,
+    zMin,
+    zMax,
     areaM2: hexAreaM2(grid.meta.spacing_km),
     globalV,
+    graph: grid.graph ?? null,
+    idIndex: new Map(ids.map((id, i) => [id, i])),
+    lon,
+    lat,
   };
 }
 
@@ -78,6 +173,32 @@ function lerp(x0: number, x1: number, y0: number, y1: number, x: number): number
     return y0;
   }
   return y0 + ((x - x0) / (x1 - x0)) * (y1 - y0);
+}
+
+export function volumeAtHeight(
+  h: number,
+  stages: number[],
+  vols: ArrayLike<number>,
+  base = 0,
+): number {
+  if (h <= stages[0]) {
+    return 0;
+  }
+  const last = stages.length - 1;
+  if (h >= stages[last]) {
+    return vols[base + last];
+  }
+  let lo = 0;
+  let hi = last;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (stages[mid] <= h) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  return lerp(stages[lo], stages[hi], vols[base + lo], vols[base + hi], h);
 }
 
 export function invertVolume(target: number, stages: number[], globalV: ArrayLike<number>): number {

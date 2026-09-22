@@ -62,3 +62,23 @@ body,
   font-size: 13px;
   margin-bottom: 8px;
 }
+
+.ocean-source {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.ocean-clear {
+  border: 0;
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: #2a3344;
+  color: #eef4ff;
+  cursor: pointer;
+  font-size: 12px;
+}
