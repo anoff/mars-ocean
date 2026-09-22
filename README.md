@@ -15,6 +15,22 @@ web/                         # Vite + React + MapLibre
 precompute/                  # Python CLI that writes hex-grid.json
 ```
 
+## Run
+
+Do not generate grids or download the DEM by hand. Use the scripts:
+
+```
+./scripts/dev.sh          # web app (fake grid is the committed default)
+./scripts/test.sh         # Python unit tests
+./scripts/test-web.sh     # spill/pour unit tests (tiny synthetic map)
+./scripts/fake-grid.sh    # rewrite web/public/grid/hex-grid.json (no DEM)
+./scripts/mola-grid.sh    # download 2 GB MOLA DEM if needed, then rewrite the grid
+```
+
+Same targets via [Task](https://taskfile.dev): `task dev`, `task test`, `task fake`, `task mola`.
+
+After `task fake`, the slider floods **west first**. After `task mola`, it follows real topography (northern lowlands / Hellas). Cell shapes are spherical Voronoi polygons (no gaps). Click a cell to pour water into that basin only (overflows at saddles). **Whole planet** restores the global waterline. The DEM stays in `precompute/data/raw/` (gitignored).
+
 ## Stages (do in order)
 
 1. **Mars map only** — React app, OpenPlanetaryMap tiles, pan/zoom. No water.

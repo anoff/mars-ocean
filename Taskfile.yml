@@ -1,0 +1,33 @@
+version: "3"
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  dev:
+    desc: Run the web app (committed fake grid)
+    cmds:
+      - ./scripts/dev.sh
+
+  test:
+    desc: Run Python and web unit tests
+    cmds:
+      - ./scripts/test.sh
+      - ./scripts/test-web.sh
+
+  fake:
+    desc: Rewrite hex-grid.json with fake west/east curves (no DEM)
+    cmds:
+      - ./scripts/fake-grid.sh
+
+  download:
+    desc: Fetch the 2 GB MOLA 463 m GeoTIFF into precompute/data/raw
+    cmds:
+      - ./scripts/download-dem.sh
+
+  mola:
+    desc: Download the DEM if needed, then write real MOLA hex-grid.json
+    cmds:
+      - ./scripts/mola-grid.sh
