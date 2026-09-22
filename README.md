@@ -1,10 +1,4 @@
-# Mars Ocean
-
-Handover repo for **Grok Build**. This is not a finished product.
-
-Goal: an interactive page that pours water onto Mars. A Python job precomputes an equal-area hex lookup grid. A React map loads that grid from its own `public/` folder and fills hexes from a volume slider.
-
-Full contract, data sources, and stage checklist: [`IMPLEMENTATION.md`](./IMPLEMENTATION.md).
+# mars-ocan
 
 ## What to build
 
@@ -41,3 +35,4 @@ After `task fake`, the slider floods **west first**. After `task mola`, it follo
 ## Done when
 
 Dragging the slider fills Mars from the hex grid, and swapping fake JSON for MOLA JSON does not require web-app changes.
+
