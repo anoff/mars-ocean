@@ -275,7 +275,7 @@ export default function App() {
     map.addControl(new NavigationControl({ visualizePitch: true }), "top-right");
     mapRef.current = map;
 
-    const gridPromise: Promise<HexGrid> = fetch("/grid/hex-grid.json").then((response) => {
+    const gridPromise: Promise<HexGrid> = fetch(`${import.meta.env.BASE_URL}grid/hex-grid.json`).then((response) => {
       if (!response.ok) {
         throw new Error(`grid HTTP ${response.status}`);
       }
